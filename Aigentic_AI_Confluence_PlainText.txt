@@ -1,0 +1,408 @@
+Aigentic AI — Inbox Alert Triage & Auto-Remediation
+Scope Management Document
+
+
+Document Information
+
+Document Owner     D&A DLC Platform Team
+Version            v1.0 — Initial Scope
+Status             Pending Funding Approval
+Classification     Confidential — Internal
+Target Audience    Engineering Leadership, FinOps, Security & Compliance
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+1. Executive Summary
+
+
+The D&A DLC Notifications mailbox currently receives 20,000+ alerts per month across 20+ categories — spanning AWS infrastructure, security, compliance, and operational health.
+
+These alerts arrive with no automated severity classification, no environment segregation, and no auto-remediation workflow — requiring engineers to manually review every single alert.
+
+This document defines a 4-phase Aigentic AI implementation that will:
+
+    - Automatically segregate alerts by environment: Dev / Test / AppDev / AppTest / Prod
+    - Classify every alert with a severity level: Critical / High / Medium / Low
+    - Auto-remediate Critical alerts that are safe and non-impactful to production
+    - Auto-close resolved incidents with a full audit trail
+
+Expected outcome: ~70% reduction in manual alert handling, sub-15-minute Critical alert response time, and significant reduction in security risk and engineer on-call fatigue.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+2. Problem Statement
+
+
+2.1 Current Alert Volumes (Mailbox Baseline)
+
+Category               Alert / Folder                   Volume     Env Tagged     Severity Tagged
+-----------------------------------------------------------------------------------------------
+Inbox                  General Inbox                    477        No             None
+Inbox                  AWS Notifications                9          No             None
+Inbox                  AWS Case Tickets                 482        No             None
+Production Alerts      ServiceQuota Alerts              142        No             None
+Production Alerts      Cactus Corrective Action         203        No             None
+Production Alerts      Non-Compliance                   66         No             None
+Production Alerts      Unauthorised API Calls           481        No             None
+Production Alerts      GuardDuty Alerts                 63         No             None
+Production Alerts      KMS Data Perimeter               —          No             None
+Production Alerts      SQS Alerts                       —          No             None
+Production Alerts      S3 Data Perimeter                —          No             None
+Corrective Actions     cactus_kms_data_perimeter        844        No             None
+Corrective Actions     cactus_s3_data_perimeter         6,447      No             None
+Corrective Actions     cactus_sqs_data_perimeter        157        No             None
+Corrective Actions     CISBenchmark                     2,601      No             None
+Corrective Actions     Health Reports                   423        No             None
+Corrective Actions     Guard Duty Alerts                1,032      No             None
+Corrective Actions     Non-Compliance Reports           4,242      No             None
+Corrective Actions     UnauthorizedAPICalls             1,566      No             None
+Corrective Actions     EMR Version                      —          No             None
+Corrective Actions     Service Quota                    104        No             None
+Cost Reports           DAILY COST REPORT                1,375      No             None
+
+
+2.2 Key Gaps in Current State
+
+    - No severity classification — every alert looks the same regardless of actual risk level
+    - No environment segregation — Production and Non-Production alerts are completely mixed
+    - No auto-remediation — 100% of alerts require manual engineer investigation
+    - No incident auto-closure — resolved issues remain open, inflating noise further
+    - Critical alert risk — high-volume noise causes genuine security threats to be missed
+    - Engineer toil — thousands of alerts reviewed manually every single day
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+3. Objectives
+
+
+    - Automatically segregate all alerts by environment: Dev · Test · AppDev · AppTest · Prod
+    - Classify every alert with a severity level: Critical · High · Medium · Low
+    - Auto-remediate Critical alerts that are safe and non-impactful to existing production setup
+    - Auto-close incidents once resolution is confirmed with a full audit trail
+    - Reduce manual engineer toil and Mean Time to Resolve (MTTR)
+    - Provide a real-time dashboard for alert health and SLA tracking
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+4. Scope of Work
+
+
+4.1 In Scope
+
+    - All 20+ alert categories in D&A DLC Notifications mailbox
+    - Environment tagging across all 5 tiers: Dev, Test, AppDev, AppTest, Prod
+    - Severity classification engine (AI and rule-based hybrid model)
+    - Auto-remediation playbooks for non-impactful Critical alerts
+    - Incident auto-closure workflows with evidence snapshots
+    - Real-time observability dashboard and weekly digest reporting
+
+
+4.2 Out of Scope
+
+    - Manual remediation of High / Medium / Low alerts in Phase 1
+    - Changes to upstream AWS alert configurations or SNS topics
+    - Third-party ticketing system integrations (future phase)
+    - Non-AWS alert sources
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+5. Phased Implementation Plan
+
+
+Phase Overview
+
+Phase      Name                                               Timeline      Key Output
+------------------------------------------------------------------------------------------
+Phase 1    Environment Segregation + Severity Classification  Weeks 1–6     Every alert tagged with env + severity
+Phase 2    Intelligent Notification & Escalation             Weeks 7–10    Right alert to right team, right channel
+Phase 3    Auto-Remediation & Incident Auto-Closure          Weeks 11–16   ~70% alerts auto-resolved
+Phase 4    Observability, Reporting & Continuous Improvement Weeks 17–20   Dashboard, digest, model retraining
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+PHASE 1 — Environment Segregation + Severity Classification
+Weeks 1 to 6
+
+
+Objective:
+Every alert entering the system will be tagged with (a) the environment it belongs to
+and (b) its severity level — before any engineer sees it. This is the foundational layer
+that all subsequent phases depend on.
+
+
+Step 1A — Environment Segregation
+
+Alerts will be classified into one of 5 environment tiers using AWS account ID,
+resource tags, naming conventions, and SNS topic metadata.
+
+Environment     Description                                                              SLA Target
+---------------------------------------------------------------------------------------------------
+PROD            Live production workloads. Highest priority. Any alert requires          Immediate
+                immediate attention or an automated safe-fix.
+
+APPTEST         Application testing and UAT. Near-production parity required.            2–4 hours
+                Higher urgency than TEST.
+
+TEST            QA and integration test environments. Medium urgency.                    4–8 hours
+                Blocks pipeline if Critical or High.
+
+APPDEV          Application development tier. Pre-test workloads.                        12–24 hours
+                Slightly higher priority than Dev.
+
+DEV             Developer sandboxes and feature branches. Lower urgency.                 24–48 hours
+                Informational unless Critical security issue.
+
+
+Environment Detection Logic
+
+Signal Source           Example Value                    Mapped Environment    Confidence
+------------------------------------------------------------------------------------------
+AWS Account ID          Account registered as prod       PROD                  High
+Resource Tag: env       env=production                   PROD                  High
+SNS Topic Name          dlc-prod-alerts-*                PROD                  High
+Resource Tag: env       env=dev or env=development       DEV                   High
+Resource Tag: env       env=test or env=qa               TEST                  High
+Resource Tag: env       env=appdev                       APPDEV                High
+Resource Tag: env       env=apptest or env=uat           APPTEST               High
+Resource Name Pattern   *-nonprod-* or *-dev-*           DEV                   Medium
+No Tag or Unknown       —                                PROD (assume worst)   Low — escalate for tagging
+
+IMPORTANT: Any resource that cannot be classified will default to PROD treatment
+(assume worst case). A mandatory AWS tagging audit will run in Week 1–2 to identify
+and fix all untagged resources.
+
+
+Step 1B — Severity Classification
+
+Once the environment is identified, each alert is classified into one of 4 severity tiers.
+
+Severity    SLA              Classification Criteria
+---------------------------------------------------------------
+CRITICAL    15 minutes       Active threat, data exfiltration risk, security boundary
+                             breach, active non-compliance in Prod
+
+HIGH        1 hour           Service degradation risk, quota breach imminent,
+                             policy violation detected
+
+MEDIUM      4 hours          Operational advisory, version drift, non-urgent
+                             compliance gap
+
+LOW         24 hours         Informational, trend monitoring, no immediate
+                             action needed
+
+
+Severity Classification Matrix — Alert Type x Environment
+
+Alert Type                    PROD        APPTEST     TEST        APPDEV      DEV
+----------------------------------------------------------------------------------
+GuardDuty Alerts              CRITICAL    CRITICAL    HIGH        MEDIUM      MEDIUM
+Unauthorised API Calls        CRITICAL    CRITICAL    HIGH        HIGH        MEDIUM
+KMS Data Perimeter            CRITICAL    HIGH        HIGH        MEDIUM      LOW
+S3 Data Perimeter             CRITICAL    HIGH        MEDIUM      MEDIUM      LOW
+Non-Compliance                CRITICAL    HIGH        MEDIUM      MEDIUM      LOW
+ServiceQuota Alerts           HIGH        HIGH        MEDIUM      LOW         LOW
+CISBenchmark                  HIGH        HIGH        MEDIUM      MEDIUM      LOW
+AWS Case Tickets              HIGH        MEDIUM      MEDIUM      LOW         LOW
+SQS Alerts                    HIGH        MEDIUM      MEDIUM      LOW         LOW
+Health Reports                HIGH        MEDIUM      MEDIUM      LOW         LOW
+Cactus Corrective Action      MEDIUM      MEDIUM      LOW         LOW         LOW
+EMR Version Drift             MEDIUM      MEDIUM      LOW         LOW         LOW
+Daily Cost Report             LOW         LOW         LOW         LOW         LOW
+
+How to read this matrix:
+Each cell shows the severity assigned when that alert type fires in that environment.
+Example: GuardDuty in PROD = CRITICAL (15 min SLA). Same alert in DEV = MEDIUM (4 hour SLA).
+
+
+Phase 1 — Activity Plan
+
+#     Activity                       Description                                                          Owner               Timeline
+---------------------------------------------------------------------------------------------------------------------------------------
+1.1   Alert Ingestion Setup          Connect DLC mailbox to Aigentic AI pipeline via email                Platform Engineer   Week 1–2
+                                     parsing / EventBridge / Lambda
+
+1.2   AWS Tag Inventory Audit        Audit all accounts for env tag consistency.                          DevOps / FinOps     Week 1–2
+                                     Identify and fix all untagged resources.
+
+1.3   Environment Tagging Engine     Build rule-based classifier using account ID,                        AI/ML Engineer      Week 2–3
+                                     resource tags, SNS topic name patterns
+
+1.4   Severity Classification Model  Train and deploy hybrid (rule + ML) severity                         AI/ML Engineer      Week 3–5
+                                     classifier on alert type x environment matrix
+
+1.5   Routing & Queue Setup          Route classified alerts to severity-specific queues                  Platform Engineer   Week 4–5
+                                     with environment sub-labels
+
+1.6   Baseline Metrics Capture       Record pre-automation volumes per category and                       Data Analyst        Week 5–6
+                                     environment as KPI baseline
+
+1.7   UAT & Validation               Validate classification accuracy on 200-alert sample.                QA / Security       Week 6
+                                     Target: less than 5% misclassification rate
+
+
+Phase 1 — Deliverables
+
+    - Alert ingestion pipeline live and logging all events
+    - 5-environment segregation operational (Prod / AppTest / Test / AppDev / Dev)
+    - Severity tagging applied to 100% of incoming alerts
+    - Environment x Severity routing queues live
+    - Baseline alert volume dashboard published
+    - Classification accuracy report (target: greater than 95% accuracy)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+PHASE 2 — Intelligent Notification & Escalation
+Weeks 7 to 10
+
+
+    - PagerDuty / Slack / Email routing based on Severity x Environment matrix
+    - Critical Prod alerts page on-call engineer immediately
+    - Dev Low alerts go to weekly digest only — no individual notifications
+    - SLA breach alerting — escalate if Critical alert unacknowledged beyond 15 minutes
+    - Duplicate suppression — deduplicate the same alert firing multiple times in a window
+    - Alert grouping — correlate related alerts into a single incident
+      (e.g. 50 S3 perimeter alerts consolidated into 1 incident)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+PHASE 3 — Auto-Remediation of Non-Impactful Critical Alerts
+Weeks 11 to 16
+
+
+Objective:
+For Critical alerts that are safe to remediate without production impact, execute
+automated fix playbooks and automatically close the incident with a full audit trail.
+
+
+Auto-Remediation Playbooks
+
+Alert Type                       Volume   Auto-Remediation Action                                    Prod Impact   Auto-Close
+------------------------------------------------------------------------------------------------------------------------------
+cactus_kms_data_perimeter        844      Re-apply KMS key policy to enforce data perimeter           None          Yes
+cactus_s3_data_perimeter         6,447    Enforce S3 bucket policy; block public access               None          Yes
+                                          if misconfigured
+cactus_sqs_data_perimeter        157      Re-apply SQS queue policy to VPC endpoints only             None          Yes
+ServiceQuota Near-Breach         142      Auto-submit quota increase request via AWS API               None          Yes
+UnauthorizedAPICalls             1,566    Isolate IAM principal; revoke temp credentials;              Low           Conditional
+                                          trigger investigation
+CISBenchmark Violation           2,601    Apply compliant config via SSM / AWS Config Rules            Low           Yes
+EMR Version Drift                —        Create JIRA ticket; flag for next patching window            None          Track only
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+PHASE 4 — Observability, Reporting & Continuous Improvement
+Weeks 17 to 20
+
+
+    - Real-time dashboard: alert volumes by environment, severity breakdown, auto-close rates
+    - Weekly digest email replacing individual alert floods for Low and Medium alerts
+    - Monthly AI model retraining using false-positive feedback from engineers
+    - SLA compliance reporting: % of Critical alerts acknowledged within 15 minutes
+    - Cost savings report tied to engineer hours saved per quarter
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+6. KPIs & Success Metrics
+
+
+KPI                                      Baseline          Phase 1 Target    Phase 3 Target
+--------------------------------------------------------------------------------------------
+Alert auto-classification rate           0% (manual)       90%+              95%+
+Environment segregation coverage         0%                100%              100%
+Critical alert MTTR                      4+ hours          Less than 1 hour  Less than 15 min
+Alert auto-close rate                    0%                N/A               60–70%
+False positive classification rate       Unknown           Less than 10%     Less than 5%
+Engineer hours saved per week            0 (baseline)      ~5 hours/week     ~20 hours/week
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+7. Risks & Mitigations
+
+
+#    Risk                                          Likelihood   Mitigation                                                Owner
+-------------------------------------------------------------------------------------------------------------------------------
+R1   AI misclassifies Critical alert as Low        Medium       Human review gate on all auto-remediations;              AI/ML Engineer
+                                                                weekly model retraining; assume worst for
+                                                                untagged resources
+
+R2   Untagged AWS resources cannot be              High         Tag audit in Week 1–2; default to Prod treatment;        DevOps Lead
+     environment-classified                                     enforcement via Service Control Policies (SCPs)
+
+R3   Auto-remediation causes unintended            Low          Dry-run mode first; blast radius limited to              Platform Lead
+     config change                                              zero-impact playbooks only; full audit trail
+
+R4   Alert schema changes break ingestion          Medium       Schema versioning; automated schema validation            Data Engineer
+     pipeline                                                   on ingestion; SNS/EventBridge standardisation
+
+R5   Scope creep delays Phase 1 delivery           High         Strict phase gates; no Phase 2+ features until           Project Manager
+                                                                Phase 1 UAT passes; change control board approval
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+8. Funding Request
+
+
+8.1 Cost Estimate
+
+Cost Item                                Phase         Estimated Cost (USD)    Type
+--------------------------------------------------------------------------------------
+AI/ML Engineer (6 months)               Phase 1–3     $60,000                 CapEx
+Platform / DevOps Engineer (4 months)   Phase 1–2     $36,000                 CapEx
+AI Model Hosting & Inference (annual)   Phase 2+      $12,000                 OpEx
+Dashboard & Observability Tooling       Phase 4       $8,000                  CapEx
+Testing, QA & Security Review           All Phases    $10,000                 CapEx
+TOTAL ESTIMATED INVESTMENT              Year 1        $126,000                —
+
+
+8.2 Return on Investment
+
+    - ~20 engineer hours/week saved at Phase 3 = approximately $80,000/year in productivity recovered
+    - Faster Critical alert response reduces risk of security incidents and regulatory fines
+    - Estimated break-even: 18–20 months post Phase 3 delivery
+    - Alert auto-close of ~70% dramatically reduces noise and on-call engineer fatigue
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+9. Approvals & Sign-Off
+
+
+Role                            Name                Signature           Date
+------------------------------------------------------------------------------
+Engineering Lead
+Security & Compliance Lead
+FinOps / Budget Owner
+Programme / Project Manager
+
+
+Note: Any changes to this scope require a new version number and re-approval
+from all stakeholders listed above.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Document: Aigentic AI Inbox Alert Triage Scope | Version 1.0 | D&A DLC Platform Team | Confidential

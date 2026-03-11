@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aigentic AI — Inbox Alert Triage | Scope Document</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2333;
+    --border: #30363d;
+    --accent: #1f6feb;
+    --accent2: #388bfd;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --orange: #f85149;
+    --purple: #a371f7;
+    --teal: #39d353;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --text3: #c9d1d9;
+    --red: #f85149;
+    --tag-prod: #0d4a3a;
+    --tag-prod-t: #3fb950;
+    --tag-dev: #1a3a5c;
+    --tag-dev-t: #388bfd;
+    --tag-test: #3a2a0d;
+    --tag-test-t: #d29922;
+    --tag-appdev: #2a1a5c;
+    --tag-appdev-t: #a371f7;
+    --tag-apptest: #3a1a1a;
+    --tag-apptest-t: #f0883e;
+    --crit: #5a0a0a;
+    --crit-t: #f85149;
+    --high: #3a2000;
+    --high-t: #f0883e;
+    --med: #2a2600;
+    --med-t: #d29922;
+    --low: #0d2a1a;
+    --low-t: #3fb950;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 0;
+  }
+
+  /* ── TOP HEADER BAR ── */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--accent2); letter-spacing: 2px; text-transform: uppercase; }
+  .topbar-sep { color: var(--border); }
+  .topbar-title { font-size: 13px; color: var(--text2); }
+  .topbar-badge { margin-left: auto; background: #1a3a1a; border: 1px solid var(--green); color: var(--green); font-size: 11px; font-family: 'IBM Plex Mono', monospace; padding: 3px 10px; border-radius: 20px; }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, #0d1117 0%, #0d1f3a 50%, #0d1117 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 40px 50px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(31,111,235,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent2); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px; }
+  .hero-title { font-size: 42px; font-weight: 700; line-height: 1.15; margin-bottom: 14px; }
+  .hero-title span { color: var(--accent2); }
+  .hero-sub { font-size: 16px; color: var(--text2); font-weight: 300; max-width: 640px; margin-bottom: 32px; }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    max-width: 860px;
+  }
+  .meta-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .meta-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--text2); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+  .meta-value { font-size: 13px; color: var(--text3); font-weight: 600; }
+
+  /* ── LAYOUT ── */
+  .layout { display: grid; grid-template-columns: 220px 1fr; max-width: 1200px; margin: 0 auto; gap: 0; }
+
+  /* ── SIDEBAR NAV ── */
+  .sidebar {
+    padding: 32px 20px;
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 49px;
+    height: calc(100vh - 49px);
+    overflow-y: auto;
+  }
+  .nav-section { margin-bottom: 24px; }
+  .nav-label { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--text2); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; padding: 0 8px; }
+  .nav-item { display: block; padding: 6px 8px; font-size: 13px; color: var(--text2); text-decoration: none; border-radius: 5px; border-left: 2px solid transparent; transition: all 0.15s; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); border-left-color: var(--accent2); }
+  .nav-item.active { background: rgba(31,111,235,0.1); color: var(--accent2); border-left-color: var(--accent2); }
+
+  /* ── MAIN CONTENT ── */
+  .main { padding: 40px 48px; }
+
+  /* ── SECTIONS ── */
+  .section { margin-bottom: 60px; }
+  .section-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .section-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent); background: rgba(31,111,235,0.1); border: 1px solid rgba(31,111,235,0.3); padding: 3px 9px; border-radius: 4px; }
+  .section-title { font-size: 22px; font-weight: 700; color: var(--text); }
+
+  h3.sub { font-size: 15px; font-weight: 600; color: var(--accent2); margin: 28px 0 14px; padding-left: 12px; border-left: 3px solid var(--accent); }
+
+  p.body { font-size: 14px; color: var(--text3); line-height: 1.75; margin-bottom: 14px; }
+
+  /* ── CALLOUT BOXES ── */
+  .callout { border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; border-left: 4px solid; }
+  .callout.info { background: rgba(31,111,235,0.08); border-color: var(--accent2); }
+  .callout.warn { background: rgba(210,153,34,0.08); border-color: var(--yellow); }
+  .callout.danger { background: rgba(248,81,73,0.08); border-color: var(--red); }
+  .callout.success { background: rgba(63,185,80,0.08); border-color: var(--green); }
+  .callout-title { font-size: 11px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; font-weight: 600; }
+  .callout.info .callout-title { color: var(--accent2); }
+  .callout.warn .callout-title { color: var(--yellow); }
+  .callout.danger .callout-title { color: var(--red); }
+  .callout.success .callout-title { color: var(--green); }
+  .callout p { font-size: 13px; color: var(--text3); line-height: 1.65; }
+
+  /* ── ENV TAGS ── */
+  .tag { display: inline-block; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tag.prod    { background: var(--tag-prod);    color: var(--tag-prod-t);    border: 1px solid var(--tag-prod-t); }
+  .tag.dev     { background: var(--tag-dev);     color: var(--tag-dev-t);     border: 1px solid var(--tag-dev-t); }
+  .tag.test    { background: var(--tag-test);    color: var(--tag-test-t);    border: 1px solid var(--tag-test-t); }
+  .tag.appdev  { background: var(--tag-appdev);  color: var(--tag-appdev-t);  border: 1px solid var(--tag-appdev-t); }
+  .tag.apptest { background: var(--tag-apptest); color: var(--tag-apptest-t); border: 1px solid var(--tag-apptest-t); }
+
+  .sev { display: inline-block; font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; padding: 2px 9px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .sev.crit { background: var(--crit); color: var(--crit-t); border: 1px solid var(--crit-t); }
+  .sev.high { background: var(--high); color: var(--high-t); border: 1px solid var(--high-t); }
+  .sev.med  { background: var(--med);  color: var(--med-t);  border: 1px solid var(--med-t); }
+  .sev.low  { background: var(--low);  color: var(--low-t);  border: 1px solid var(--low-t); }
+
+  /* ── TABLES ── */
+  .tbl-wrap { overflow-x: auto; margin-bottom: 24px; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--surface2); }
+  thead th { padding: 11px 14px; text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.025); }
+  tbody td { padding: 10px 14px; color: var(--text3); vertical-align: middle; }
+  .vol-high { color: var(--red); font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .vol-med  { color: var(--yellow); font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+  .vol-low  { color: var(--text3); font-family: 'IBM Plex Mono', monospace; }
+  .vol-none { color: var(--text2); font-family: 'IBM Plex Mono', monospace; font-style: italic; }
+
+  /* ── PHASE CARDS ── */
+  .phase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .phase-number {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .phase-number.p1 { background: rgba(31,111,235,0.15); color: var(--accent2); border: 2px solid var(--accent); }
+  .phase-number.p2 { background: rgba(163,113,247,0.15); color: var(--purple); border: 2px solid var(--purple); }
+  .phase-number.p3 { background: rgba(248,81,73,0.12); color: var(--red); border: 2px solid var(--red); }
+  .phase-number.p4 { background: rgba(63,185,80,0.12); color: var(--green); border: 2px solid var(--green); }
+  .phase-info h4 { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .phase-info p { font-size: 12px; color: var(--text2); }
+  .phase-timeline { margin-left: auto; font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); padding: 4px 12px; border-radius: 20px; white-space: nowrap; }
+  .phase-body { padding: 20px 24px; }
+
+  /* ── ENV CLASSIFICATION TABLE (big) ── */
+  .env-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .env-card {
+    border-radius: 10px;
+    padding: 16px;
+    border: 1px solid;
+  }
+  .env-card.prod    { background: #0a1f16; border-color: #2a6645; }
+  .env-card.dev     { background: #0a1428; border-color: #1a4a7a; }
+  .env-card.test    { background: #1f1800; border-color: #6a4800; }
+  .env-card.appdev  { background: #180a28; border-color: #5a3a8a; }
+  .env-card.apptest { background: #1f0f0a; border-color: #6a3010; }
+  .env-name { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .env-card.prod .env-name    { color: var(--tag-prod-t); }
+  .env-card.dev .env-name     { color: var(--tag-dev-t); }
+  .env-card.test .env-name    { color: var(--tag-test-t); }
+  .env-card.appdev .env-name  { color: var(--tag-appdev-t); }
+  .env-card.apptest .env-name { color: var(--tag-apptest-t); }
+  .env-desc { font-size: 11px; color: var(--text2); margin-bottom: 10px; line-height: 1.5; }
+  .env-sla { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: var(--text2); padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+  /* ── SEVERITY MATRIX ── */
+  .sev-matrix { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .sev-card { border-radius: 10px; padding: 18px; border: 1px solid; }
+  .sev-card.crit { background: #1a0000; border-color: #7a1010; }
+  .sev-card.high { background: #1a1000; border-color: #7a4000; }
+  .sev-card.med  { background: #1a1800; border-color: #7a6000; }
+  .sev-card.low  { background: #001a08; border-color: #1a6a30; }
+  .sev-label { font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .sev-card.crit .sev-label { color: var(--crit-t); }
+  .sev-card.high .sev-label { color: var(--high-t); }
+  .sev-card.med  .sev-label { color: var(--med-t); }
+  .sev-card.low  .sev-label { color: var(--low-t); }
+  .sev-sla { font-size: 22px; font-weight: 700; margin: 4px 0 8px; }
+  .sev-card.crit .sev-sla { color: var(--crit-t); }
+  .sev-card.high .sev-sla { color: var(--high-t); }
+  .sev-card.med  .sev-sla { color: var(--med-t); }
+  .sev-card.low  .sev-sla { color: var(--low-t); }
+  .sev-rule { font-size: 11px; color: var(--text2); line-height: 1.6; }
+
+  /* ── DELIVERABLE LIST ── */
+  .deliv-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .deliv-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text3); padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px solid var(--border); }
+  .deliv-list li::before { content: "✓"; color: var(--green); font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── KPI TABLE ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .kpi-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .kpi-metric { font-size: 28px; font-weight: 700; color: var(--accent2); font-family: 'IBM Plex Mono', monospace; margin-bottom: 4px; }
+  .kpi-label { font-size: 12px; color: var(--text2); }
+
+  /* ── APPROVAL TABLE ── */
+  .approval-row td:nth-child(3), .approval-row td:nth-child(4) { min-width: 140px; border-bottom: 1px dashed var(--border) !important; color: transparent !important; }
+
+  /* ── BULLETS ── */
+  ul.blist { list-style: none; margin: 0 0 14px; padding: 0; }
+  ul.blist li { font-size: 13px; color: var(--text3); padding: 5px 0 5px 20px; position: relative; line-height: 1.6; }
+  ul.blist li::before { content: "›"; position: absolute; left: 0; color: var(--accent2); font-weight: 700; }
+
+  /* ── PRINT / COPY HINT ── */
+  .copy-hint {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--text2);
+    max-width: 240px;
+    line-height: 1.5;
+    z-index: 200;
+  }
+  .copy-hint strong { color: var(--text); display: block; margin-bottom: 4px; }
+
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .env-grid { grid-template-columns: 1fr 1fr; }
+    .sev-matrix { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <span class="topbar-logo">D&amp;A DLC</span>
+  <span class="topbar-sep">›</span>
+  <span class="topbar-title">Scope Management / Aigentic AI Alert Triage</span>
+  <span class="topbar-badge">⏳ Pending Approval</span>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Scope Management Document · v1.0</div>
+  <h1 class="hero-title">Aigentic AI — <span>Inbox Alert Triage</span><br>& Auto-Remediation</h1>
+  <p class="hero-sub">A phased implementation plan to intelligently segregate, classify, remediate, and close D&amp;A DLC Notification alerts — reducing engineer toil and improving security response times.</p>
+  <div class="meta-grid">
+    <div class="meta-card"><div class="meta-label">Owner</div><div class="meta-value">D&amp;A DLC Platform Team</div></div>
+    <div class="meta-card"><div class="meta-label">Version</div><div class="meta-value">v1.0 — Initial Scope</div></div>
+    <div class="meta-card"><div class="meta-label">Status</div><div class="meta-value">🟡 Pending Funding Approval</div></div>
+    <div class="meta-card"><div class="meta-label">Classification</div><div class="meta-value">Confidential · Internal</div></div>
+    <div class="meta-card"><div class="meta-label">Created</div><div class="meta-value" id="doc-date"></div></div>
+    <div class="meta-card"><div class="meta-label">Target Audience</div><div class="meta-value">Eng Leadership · FinOps · SecOps</div></div>
+  </div>
+</div>
+
+<div class="layout">
+
+<!-- SIDEBAR NAV -->
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <a href="#summary" class="nav-item active">Executive Summary</a>
+    <a href="#problem" class="nav-item">Problem Statement</a>
+    <a href="#objectives" class="nav-item">Objectives</a>
+    <a href="#scope" class="nav-item">Scope of Work</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Implementation</div>
+    <a href="#phase1" class="nav-item">Phase 1 — Segregation</a>
+    <a href="#phase2" class="nav-item">Phase 2 — Severity</a>
+    <a href="#phase3" class="nav-item">Phase 3 — Remediation</a>
+    <a href="#phase4" class="nav-item">Phase 4 — Observability</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Governance</div>
+    <a href="#kpis" class="nav-item">KPIs & Success Metrics</a>
+    <a href="#risks" class="nav-item">Risks & Mitigations</a>
+    <a href="#funding" class="nav-item">Funding Request</a>
+    <a href="#approvals" class="nav-item">Approvals</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- 1. EXECUTIVE SUMMARY -->
+  <section class="section" id="summary">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Executive Summary</h2>
+    </div>
+    <div class="callout info">
+      <div class="callout-title">📌 Problem in one line</div>
+      <p>The D&amp;A DLC mailbox receives <strong>20,000+ alerts/month</strong> across 20+ categories with <strong>no severity tagging, no environment segregation, and no auto-remediation</strong> — requiring engineers to manually review every alert.</p>
+    </div>
+    <p class="body">This document defines a <strong>4-phase Aigentic AI implementation</strong> that will automatically segregate alerts by environment (Dev / Test / AppDev / AppTest / Prod), classify them by severity (Critical / High / Medium / Low), auto-remediate safe Critical alerts with zero production impact, and auto-close resolved incidents.</p>
+    <p class="body">The expected outcome is a <strong>~70% reduction in manual alert handling</strong>, a sub-15-minute Critical alert response time, and significant reduction in security risk and engineer on-call fatigue.</p>
+  </section>
+
+  <!-- 2. PROBLEM STATEMENT -->
+  <section class="section" id="problem">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Problem Statement</h2>
+    </div>
+
+    <h3 class="sub">Current Alert Volumes (Mailbox Baseline)</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Alert / Folder</th>
+            <th>Volume</th>
+            <th>Env (Current)</th>
+            <th>Severity (Current)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Inbox</strong></td><td>General Inbox</td><td class="vol-high">477</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Inbox</strong></td><td>AWS Notifications</td><td class="vol-low">9</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Inbox</strong></td><td>AWS Case Tickets</td><td class="vol-high">482</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>ServiceQuota Alerts</td><td class="vol-med">142</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>Cactus Corrective Action</td><td class="vol-med">203</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>Non-Compliance</td><td class="vol-low">66</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>Unauthorised API Calls</td><td class="vol-high">481</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>GuardDuty Alerts</td><td class="vol-low">63</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>KMS Data Perimeter</td><td class="vol-none">—</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>SQS Alerts</td><td class="vol-none">—</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Production Alerts</strong></td><td>S3 Data Perimeter</td><td class="vol-none">—</td><td><span class="tag prod">Prod</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>cactus_kms_data_perimeter</td><td class="vol-high">844</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>cactus_s3_data_perimeter</td><td class="vol-high">6,447</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>cactus_sqs_data_perimeter</td><td class="vol-med">157</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>CISBenchmark</td><td class="vol-high">2,601</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>Health Reports</td><td class="vol-med">423</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>Guard Duty Alerts</td><td class="vol-high">1,032</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>Non-Compliance Reports</td><td class="vol-high">4,242</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>UnauthorizedAPICalls</td><td class="vol-high">1,566</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>EMR Version</td><td class="vol-none">—</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Corrective Actions</strong></td><td>Service Quota</td><td class="vol-low">104</td><td><span class="tag prod">Prod</span> <span class="tag dev">Dev</span></td><td><span class="sev crit">Unknown</span></td></tr>
+          <tr><td><strong>Cost Reports</strong></td><td>DAILY COST REPORT</td><td class="vol-high">1,375</td><td>All</td><td><span class="sev crit">Unknown</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">⚠️ Key Gaps</div>
+      <p>
+        <strong>No severity classification</strong> — every alert looks the same regardless of risk.<br>
+        <strong>No environment segregation</strong> — Production and Non-Prod alerts are completely mixed.<br>
+        <strong>No auto-remediation</strong> — 100% of alerts require manual engineer review.<br>
+        <strong>Critical alert risk</strong> — high-volume noise causes genuine threats to be missed.
+      </p>
+    </div>
+  </section>
+
+  <!-- 3. OBJECTIVES -->
+  <section class="section" id="objectives">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Objectives</h2>
+    </div>
+    <ul class="blist">
+      <li>Segregate all alerts by <strong>environment</strong>: Dev · Test · AppDev · AppTest · Prod</li>
+      <li>Classify every alert with a <strong>severity level</strong>: Critical · High · Medium · Low</li>
+      <li>Auto-remediate Critical alerts that are <strong>safe and non-impactful</strong> to production</li>
+      <li>Auto-close incidents once resolution is confirmed with a full audit trail</li>
+      <li>Reduce manual engineer toil and <strong>Mean Time to Resolve (MTTR)</strong></li>
+      <li>Provide real-time dashboard for alert health, SLA compliance, and model accuracy</li>
+    </ul>
+  </section>
+
+  <!-- 4. SCOPE -->
+  <section class="section" id="scope">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Scope of Work</h2>
+    </div>
+    <h3 class="sub">In Scope</h3>
+    <ul class="blist">
+      <li>All 20+ alert categories in D&amp;A DLC Notifications mailbox</li>
+      <li>Environment tagging across all 5 tiers: Dev, Test, AppDev, AppTest, Prod</li>
+      <li>Severity classification engine (AI/rule-based hybrid)</li>
+      <li>Auto-remediation playbooks for non-impactful Critical alerts</li>
+      <li>Incident auto-closure with evidence snapshot</li>
+      <li>Real-time observability dashboard and weekly digest</li>
+    </ul>
+    <h3 class="sub">Out of Scope</h3>
+    <ul class="blist">
+      <li>Manual remediation of High / Medium / Low alerts (Phase 1)</li>
+      <li>Changes to upstream AWS alert configurations or SNS topics</li>
+      <li>Third-party ticketing system integrations (future phase)</li>
+      <li>Non-AWS alert sources</li>
+    </ul>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- PHASE 1 -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <section class="section" id="phase1">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">Phased Implementation Plan</h2>
+    </div>
+
+    <div class="phase-card">
+      <div class="phase-header">
+        <div class="phase-number p1">1</div>
+        <div class="phase-info">
+          <h4>Environment Segregation + Severity Classification</h4>
+          <p>Build ingestion pipeline · Tag by environment · Classify by severity · Route to streams</p>
+        </div>
+        <div class="phase-timeline">Weeks 1–6</div>
+      </div>
+      <div class="phase-body">
+
+        <div class="callout info">
+          <div class="callout-title">🎯 Phase 1 Objective</div>
+          <p>Every alert entering the system will be tagged with (a) the environment it belongs to and (b) its severity level — before any engineer sees it. This is the foundational layer all subsequent phases depend on.</p>
+        </div>
+
+        <h3 class="sub">Step 1A — Environment Segregation</h3>
+        <p class="body">Alerts will be classified into one of 5 environment tiers using AWS account ID, resource tags, naming conventions, and SNS topic metadata.</p>
+
+        <div class="env-grid">
+          <div class="env-card prod">
+            <div class="env-name">PROD</div>
+            <div class="env-desc">Live production workloads. Highest priority. Any alert here requires immediate attention or automated safe-fix.</div>
+            <div class="env-sla">SLA: Immediate response</div>
+          </div>
+          <div class="env-card dev">
+            <div class="env-name">DEV</div>
+            <div class="env-desc">Developer sandboxes and feature branches. Lower urgency. Alerts are informational unless Critical security.</div>
+            <div class="env-sla">SLA: 24–48 hours</div>
+          </div>
+          <div class="env-card test">
+            <div class="env-name">TEST</div>
+            <div class="env-desc">QA and integration test environments. Medium urgency. Blocks pipeline if Critical/High.</div>
+            <div class="env-sla">SLA: 4–8 hours</div>
+          </div>
+          <div class="env-card appdev">
+            <div class="env-name">APPDEV</div>
+            <div class="env-desc">Application development tier. Pre-test workloads. Treated similar to Dev with slightly higher priority.</div>
+            <div class="env-sla">SLA: 12–24 hours</div>
+          </div>
+          <div class="env-card apptest">
+            <div class="env-name">APPTEST</div>
+            <div class="env-desc">Application testing and UAT. Near-production parity required. Higher urgency than TEST.</div>
+            <div class="env-sla">SLA: 2–4 hours</div>
+          </div>
+        </div>
+
+        <h3 class="sub">Environment Detection Logic</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Signal Source</th>
+                <th>Example Value</th>
+                <th>Mapped Environment</th>
+                <th>Confidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>AWS Account ID</td><td>1234-xxxx-prod</td><td><span class="tag prod">Prod</span></td><td>High</td></tr>
+              <tr><td>Resource Tag: Env</td><td>env=production</td><td><span class="tag prod">Prod</span></td><td>High</td></tr>
+              <tr><td>SNS Topic Name</td><td>dlc-prod-alerts-*</td><td><span class="tag prod">Prod</span></td><td>High</td></tr>
+              <tr><td>Resource Tag: Env</td><td>env=dev / env=development</td><td><span class="tag dev">Dev</span></td><td>High</td></tr>
+              <tr><td>Resource Tag: Env</td><td>env=test / env=qa</td><td><span class="tag test">Test</span></td><td>High</td></tr>
+              <tr><td>Resource Tag: Env</td><td>env=appdev</td><td><span class="tag appdev">AppDev</span></td><td>High</td></tr>
+              <tr><td>Resource Tag: Env</td><td>env=apptest / env=uat</td><td><span class="tag apptest">AppTest</span></td><td>High</td></tr>
+              <tr><td>Resource Name Pattern</td><td>*-nonprod-* / *-dev-*</td><td><span class="tag dev">Dev</span></td><td>Medium</td></tr>
+              <tr><td>No Tag / Unknown</td><td>—</td><td><span class="tag prod">Prod</span> (assume worst)</td><td>Low → escalate for tagging</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub">Step 1B — Severity Classification</h3>
+        <p class="body">Once environment is known, each alert is classified into one of 4 severity tiers based on alert type, impacted resources, compliance ruleset, and historical pattern analysis.</p>
+
+        <div class="sev-matrix">
+          <div class="sev-card crit">
+            <div class="sev-label">CRITICAL</div>
+            <div class="sev-sla">15 min</div>
+            <div class="sev-rule">
+              Active threat or data breach risk.<br>
+              GuardDuty findings · Unauthorized API calls · KMS/S3 perimeter breach · Active Non-Compliance in Prod
+            </div>
+          </div>
+          <div class="sev-card high">
+            <div class="sev-label">HIGH</div>
+            <div class="sev-sla">1 hour</div>
+            <div class="sev-rule">
+              Service degradation or quota breach imminent.<br>
+              ServiceQuota near-limit · CISBenchmark violation (Prod) · Health report failure
+            </div>
+          </div>
+          <div class="sev-card med">
+            <div class="sev-label">MEDIUM</div>
+            <div class="sev-sla">4 hours</div>
+            <div class="sev-rule">
+              Operational advisory. Action needed but not urgent.<br>
+              EMR version drift · SQS backlog · Non-Prod compliance gap · Health warnings
+            </div>
+          </div>
+          <div class="sev-card low">
+            <div class="sev-label">LOW</div>
+            <div class="sev-sla">24 hours</div>
+            <div class="sev-rule">
+              Informational. No immediate action needed.<br>
+              Daily cost reports · Dev/Test S3 perimeter drift · Cactus CA in non-Prod
+            </div>
+          </div>
+        </div>
+
+        <h3 class="sub">Severity Classification by Alert Type × Environment</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Alert Type</th>
+                <th>PROD</th>
+                <th>APPTEST</th>
+                <th>TEST</th>
+                <th>APPDEV</th>
+                <th>DEV</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>GuardDuty Alerts</strong></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+              </tr>
+              <tr>
+                <td><strong>Unauthorised API Calls</strong></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+              </tr>
+              <tr>
+                <td><strong>KMS Data Perimeter</strong></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>S3 Data Perimeter</strong></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>Non-Compliance</strong></td>
+                <td><span class="sev crit">CRITICAL</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>ServiceQuota Alerts</strong></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>CISBenchmark</strong></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>SQS Alerts</strong></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>Health Reports</strong></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>Cactus Corrective Action</strong></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>EMR Version Drift</strong></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>Daily Cost Report</strong></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+              <tr>
+                <td><strong>AWS Case Tickets</strong></td>
+                <td><span class="sev high">HIGH</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev med">MEDIUM</span></td>
+                <td><span class="sev low">LOW</span></td>
+                <td><span class="sev low">LOW</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub">Phase 1 — Activity Plan</h3>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Activity</th><th>Description</th><th>Owner</th><th>Timeline</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1.1</td><td><strong>Alert Ingestion Setup</strong></td><td>Connect DLC mailbox to Aigentic AI pipeline via email parsing / EventBridge / Lambda</td><td>Platform Eng</td><td>Week 1–2</td></tr>
+              <tr><td>1.2</td><td><strong>AWS Tag Inventory Audit</strong></td><td>Audit all accounts for env tag consistency; identify untagged resources</td><td>DevOps / FinOps</td><td>Week 1–2</td></tr>
+              <tr><td>1.3</td><td><strong>Environment Tagging Engine</strong></td><td>Build rule-based classifier using account ID, resource tags, SNS topic name patterns</td><td>AI/ML Engineer</td><td>Week 2–3</td></tr>
+              <tr><td>1.4</td><td><strong>Severity Classification Model</strong></td><td>Train + deploy hybrid (rule + ML) severity classifier on alert type × environment matrix</td><td>AI/ML Engineer</td><td>Week 3–5</td></tr>
+              <tr><td>1.5</td><td><strong>Routing & Queue Setup</strong></td><td>Route classified alerts to severity-specific queues with environment sub-labels</td><td>Platform Eng</td><td>Week 4–5</td></tr>
+              <tr><td>1.6</td><td><strong>Baseline Metrics Capture</strong></td><td>Record pre-automation volumes per category and environment as KPI baseline</td><td>Data Analyst</td><td>Week 5–6</td></tr>
+              <tr><td>1.7</td><td><strong>UAT & Validation</strong></td><td>Validate classification accuracy on 200-alert sample; target &lt;5% misclassification rate</td><td>QA / Security</td><td>Week 6</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub">Phase 1 Deliverables</h3>
+        <ul class="deliv-list">
+          <li>Alert ingestion pipeline live and logging all events</li>
+          <li>5-environment segregation operational (Prod / AppTest / Test / AppDev / Dev)</li>
+          <li>Severity tagging on 100% of incoming alerts</li>
+          <li>Env × Severity routing queues live</li>
+          <li>Baseline alert volume dashboard</li>
+          <li>Classification accuracy report (&gt;95% target)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase-card" id="phase2">
+      <div class="phase-header">
+        <div class="phase-number p2">2</div>
+        <div class="phase-info">
+          <h4>Intelligent Notification & Escalation</h4>
+          <p>Route classified alerts to the right team via the right channel at the right urgency</p>
+        </div>
+        <div class="phase-timeline">Weeks 7–10</div>
+      </div>
+      <div class="phase-body">
+        <ul class="blist">
+          <li>PagerDuty / Slack / Email routing based on Severity × Environment matrix</li>
+          <li>Critical Prod alerts page on-call engineer immediately; Dev Low alerts go to weekly digest only</li>
+          <li>SLA breach alerting — escalate if Critical alert unacknowledged beyond 15 min</li>
+          <li>Duplicate suppression — deduplicate the same alert firing multiple times within a window</li>
+          <li>Alert grouping — correlate related alerts into a single incident (e.g. 50 S3 perimeter alerts → 1 incident)</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase-card" id="phase3">
+      <div class="phase-header">
+        <div class="phase-number p3">3</div>
+        <div class="phase-info">
+          <h4>Auto-Remediation of Non-Impactful Critical Alerts</h4>
+          <p>Execute safe playbooks for Critical alerts · Auto-close resolved incidents</p>
+        </div>
+        <div class="phase-timeline">Weeks 11–16</div>
+      </div>
+      <div class="phase-body">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr><th>Alert Type</th><th>Remediation Action</th><th>Env Scope</th><th>Prod Impact</th><th>Auto-Close?</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>cactus_kms_data_perimeter (844)</td><td>Re-apply KMS key policy to enforce perimeter</td><td>All</td><td style="color:var(--green);font-weight:700;">None</td><td style="color:var(--green);">✓ Yes</td></tr>
+              <tr><td>cactus_s3_data_perimeter (6,447)</td><td>Enforce S3 bucket policy; block public access</td><td>All</td><td style="color:var(--green);font-weight:700;">None</td><td style="color:var(--green);">✓ Yes</td></tr>
+              <tr><td>cactus_sqs_data_perimeter (157)</td><td>Re-apply SQS queue policy to VPC endpoints only</td><td>All</td><td style="color:var(--green);font-weight:700;">None</td><td style="color:var(--green);">✓ Yes</td></tr>
+              <tr><td>ServiceQuota Near-Breach</td><td>Auto-submit quota increase via AWS API</td><td>Prod, AppTest</td><td style="color:var(--green);font-weight:700;">None</td><td style="color:var(--green);">✓ Yes</td></tr>
+              <tr><td>UnauthorizedAPICalls (1,566)</td><td>Isolate IAM principal; revoke temp credentials</td><td>Prod</td><td style="color:var(--yellow);font-weight:700;">Low</td><td style="color:var(--yellow);">⚡ Conditional</td></tr>
+              <tr><td>CISBenchmark Violation (2,601)</td><td>Apply compliant config via SSM / Config Rules</td><td>All</td><td style="color:var(--yellow);font-weight:700;">Low</td><td style="color:var(--green);">✓ Yes</td></tr>
+              <tr><td>EMR Version Drift</td><td>Create JIRA ticket; flag for next patching window</td><td>Prod</td><td style="color:var(--green);font-weight:700;">None</td><td style="color:var(--text2);">Track only</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="phase-card" id="phase4">
+      <div class="phase-header">
+        <div class="phase-number p4">4</div>
+        <div class="phase-info">
+          <h4>Observability, Reporting & Continuous Improvement</h4>
+          <p>Dashboard · Weekly digest · Model retraining · SLA compliance reporting</p>
+        </div>
+        <div class="phase-timeline">Weeks 17–20</div>
+      </div>
+      <div class="phase-body">
+        <ul class="blist">
+          <li>Real-time dashboard: volumes by environment, severity breakdown, auto-close rates</li>
+          <li>Weekly digest email replacing individual alert floods for Low / Medium alerts</li>
+          <li>Monthly AI model retraining using false-positive feedback from engineers</li>
+          <li>SLA compliance reporting: % of Critical alerts acknowledged within 15 min</li>
+          <li>Cost savings report tied to engineer hours saved per quarter</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="section" id="kpis">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2 class="section-title">KPIs & Success Metrics</h2>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-metric">95%+</div><div class="kpi-label">Alert auto-classification accuracy (Phase 1 target)</div></div>
+      <div class="kpi-card"><div class="kpi-metric">&lt;15m</div><div class="kpi-label">Critical Prod alert MTTR (Phase 3 target)</div></div>
+      <div class="kpi-card"><div class="kpi-metric">~70%</div><div class="kpi-label">Alert auto-close rate (Phase 3 target)</div></div>
+      <div class="kpi-card"><div class="kpi-metric">&lt;5%</div><div class="kpi-label">False positive classification rate</div></div>
+      <div class="kpi-card"><div class="kpi-metric">20 hrs</div><div class="kpi-label">Engineer hours saved per week (Phase 3)</div></div>
+      <div class="kpi-card"><div class="kpi-metric">5 envs</div><div class="kpi-label">Environments segregated in Phase 1</div></div>
+    </div>
+  </section>
+
+  <!-- RISKS -->
+  <section class="section" id="risks">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2 class="section-title">Risks & Mitigations</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>#</th><th>Risk</th><th>Likelihood</th><th>Mitigation</th><th>Owner</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>R1</td><td>AI misclassifies Critical alert as Low severity</td><td><span class="sev med">MEDIUM</span></td><td>Human review gate on auto-remediations; weekly model retraining; "assume worst" for untagged resources</td><td>AI/ML Engineer</td></tr>
+          <tr><td>R2</td><td>Untagged AWS resources can't be environment-classified</td><td><span class="sev high">HIGH</span></td><td>Tag audit in Week 1–2; default to Prod treatment for unknowns; enforcement policy via SCPs</td><td>DevOps Lead</td></tr>
+          <tr><td>R3</td><td>Auto-remediation causes unintended config change</td><td><span class="sev low">LOW</span></td><td>Dry-run mode first; blast radius limited to zero-impact playbooks only; audit trail for every action</td><td>Platform Lead</td></tr>
+          <tr><td>R4</td><td>Alert schema changes break ingestion pipeline</td><td><span class="sev med">MEDIUM</span></td><td>Schema versioning; automated schema validation on ingestion; SNS/EventBridge envelope standardisation</td><td>Data Engineer</td></tr>
+          <tr><td>R5</td><td>Scope creep delays Phase 1 delivery</td><td><span class="sev high">HIGH</span></td><td>Strict phase gates; no new Phase 2+ features until Phase 1 UAT passes; change control board approval</td><td>Project Manager</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- FUNDING -->
+  <section class="section" id="funding">
+    <div class="section-header">
+      <span class="section-num">08</span>
+      <h2 class="section-title">Funding Request</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Cost Item</th><th>Phase</th><th>Est. Cost (USD)</th><th>Type</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>AI/ML Engineer (6 months)</td><td>Phase 1–3</td><td>$60,000</td><td>CapEx</td></tr>
+          <tr><td>Platform / DevOps Engineer (4 months)</td><td>Phase 1–2</td><td>$36,000</td><td>CapEx</td></tr>
+          <tr><td>AI Model Hosting & Inference (annual)</td><td>Phase 2+</td><td>$12,000</td><td>OpEx</td></tr>
+          <tr><td>Dashboard & Observability Tooling</td><td>Phase 4</td><td>$8,000</td><td>CapEx</td></tr>
+          <tr><td>Testing, QA & Security Review</td><td>All Phases</td><td>$10,000</td><td>CapEx</td></tr>
+          <tr style="background:rgba(31,111,235,0.08);"><td><strong>TOTAL ESTIMATED INVESTMENT</strong></td><td><strong>Year 1</strong></td><td><strong style="color:var(--accent2);font-size:15px;">$126,000</strong></td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout success">
+      <div class="callout-title">💰 ROI Justification</div>
+      <p>~20 engineer hours/week saved at Phase 3 → ~$80,000/year in productivity. Faster Critical alert response reduces security incident risk. Estimated break-even: <strong>18–20 months</strong> post Phase 3 delivery. Alert auto-close of ~70% dramatically reduces noise and on-call fatigue.</p>
+    </div>
+  </section>
+
+  <!-- APPROVALS -->
+  <section class="section" id="approvals">
+    <div class="section-header">
+      <span class="section-num">09</span>
+      <h2 class="section-title">Approvals & Sign-Off</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Name</th><th>Signature</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          <tr class="approval-row"><td>Engineering Lead</td><td></td><td style="min-width:160px;border-bottom:1px dashed var(--border);"></td><td style="min-width:120px;border-bottom:1px dashed var(--border);"></td></tr>
+          <tr class="approval-row"><td>Security & Compliance Lead</td><td></td><td style="min-width:160px;border-bottom:1px dashed var(--border);"></td><td style="min-width:120px;border-bottom:1px dashed var(--border);"></td></tr>
+          <tr class="approval-row"><td>FinOps / Budget Owner</td><td></td><td style="min-width:160px;border-bottom:1px dashed var(--border);"></td><td style="min-width:120px;border-bottom:1px dashed var(--border);"></td></tr>
+          <tr class="approval-row"><td>Programme / Project Manager</td><td></td><td style="min-width:160px;border-bottom:1px dashed var(--border);"></td><td style="min-width:120px;border-bottom:1px dashed var(--border);"></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="body" style="color:var(--text2);font-size:12px;margin-top:16px;">Document prepared for funding approval. For questions, contact the D&amp;A DLC Platform Team. Version controlled — any changes require a new version and re-approval.</p>
+  </section>
+
+</main>
+</div>
+
+<div class="copy-hint">
+  <strong>📋 For Confluence</strong>
+  Use the Confluence HTML macro to embed this page, or copy sections into Confluence's native editor.
+</div>
+
+<script>
+  document.getElementById('doc-date').textContent = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+
+  // Active nav highlighting on scroll
+  const sections = document.querySelectorAll('section[id], div.phase-card[id]');
+  const navLinks = document.querySelectorAll('.nav-item');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-item[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
